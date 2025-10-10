@@ -12,7 +12,6 @@ sed*
 *.vscode
 *.png
 *.pdf
-*.jpg
 *.idea
 *.ipynb_checkpoints
 *.pcap

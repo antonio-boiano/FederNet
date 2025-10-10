@@ -64,7 +64,7 @@ Once started, open your browser to `http://localhost:5000` to access the configu
 - Save/load configuration files
 - Generate YAML files compatible with `run.py`
 
-![Web UI Example](src/resources/ui-example.png)
+![Web UI Example](src/resources/ui-example.jpg)
 
 After configuring your experiment in the UI, click "Save & Generate YAML" to create a configuration file. The generated YAML can then be executed using:
 
