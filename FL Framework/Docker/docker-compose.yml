@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  server:
+    image: anboiano/fedopt
+    container_name: fed_opt_server
+    command: python3 run.py --ip 172.23.0.2
+    ports:
+      - "12345:12345"
+    networks:
+      fed_network:
+        ipv4_address: 172.23.0.2
+
+  client1:
+    image: anboiano/fedopt
+    container_name: fed_opt_client1
+    command: python3 run.py --mode client --ip 172.23.0.2
+    networks:
+      - fed_network
+    depends_on:
+     - server
+
+  client2:
+    image: anboiano/fedopt
+    container_name: fed_opt_client2
+    command: python3 run.py --mode client --ip 172.23.0.2
+    networks:
+      - fed_network
+    depends_on:
+     - server
+
+  client3:
+    image: anboiano/fedopt
+    container_name: fed_opt_client3
+    command: python3 run.py --mode client --ip 172.23.0.2
+    networks:
+      - fed_network
+    depends_on:
+     - server
+
+  client4:
+    image: anboiano/fedopt
+    container_name: fed_opt_client4
+    command: python3 run.py --mode client --ip 172.23.0.2
+    networks:
+      - fed_network
+    depends_on:
+     - server
+
+networks:
+  fed_network:
+    external: true

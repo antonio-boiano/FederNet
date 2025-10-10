@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+message Message {
+  string payload = 1;
+  optional string address = 2;
+  optional string port = 3;
+}
+
+service Communication {
+  rpc SendToServer(Message) returns (google.protobuf.Empty);
+  rpc SendToClient(Message) returns (google.protobuf.Empty);
+}

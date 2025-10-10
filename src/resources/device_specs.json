@@ -1,0 +1,50 @@
+{
+  "rpi5": {
+    "cores": 4,
+    "ram_gib": 4,
+    "freq_mhz": 2400,
+    "single_core_score": 516
+  },
+  "rpi4": {
+    "cores": 4,
+    "ram_gib": 4,
+    "freq_mhz": 1800,
+    "single_core_score": 187
+  },
+  "jetson_nano": {
+    "cores": 6,
+    "ram_gib": 4,
+    "freq_mhz": 1728,
+    "single_core_score": 629
+  },
+  "intel_nuc8": {
+    "cores": 4,
+    "ram_gib": 8,
+    "freq_mhz": 2700,
+    "single_core_score": 1150
+  },
+  "smartphone_generic": {
+    "cores": 8,
+    "ram_gib": 4,
+    "freq_mhz": 2000,
+    "single_core_score": 1000
+  },
+  "host_5": {
+    "cores": 4,
+    "ram_gib": 16,
+    "freq_mhz": 2400,
+    "single_core_score": 1079
+  },
+  "host_10": {
+    "cores": 2,
+    "ram_gib": 8,
+    "freq_mhz": 2400,
+    "single_core_score": 1079
+  },
+  "host_1": {
+    "cores": 20,
+    "ram_gib": 93,
+    "freq_mhz": 2400,
+    "single_core_score": 1079
+  }
+}

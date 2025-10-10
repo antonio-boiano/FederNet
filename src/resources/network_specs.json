@@ -1,0 +1,554 @@
+{
+  "low": {
+    "adsl2_plus": {
+      "band_mbps": {
+        "typical": 12,
+        "range": [8, 24],
+        "notes": "Maximum theoretical 24 Mbps downstream, 3.3 Mbps upstream. Actual speeds highly dependent on line quality and distance."
+      },
+      "delay_ms": {
+        "typical": 25,
+        "range": [15, 40],
+        "notes": "Increases with network congestion and distance."
+      },
+      "loss_percent": {
+        "typical": 0.2,
+        "range": [0.1, 0.5],
+        "notes": "Higher during peak usage periods."
+      },
+      "queue_pkts": {
+        "typical": 300,
+        "range": [200, 400],
+        "notes": "Buffer size varies by equipment manufacturer."
+      },
+      "low_queue_pkts": {
+        "typical": 50,
+        "range": [30, 80],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 4,
+        "range": [2, 8],
+        "notes": "Increases during network congestion."
+      }
+    },
+    "satellite_geo": {
+      "band_mbps": {
+        "typical": 25,
+        "range": [15, 50],
+        "notes": "Modern GEO satellite services offer improved bandwidth over older systems."
+      },
+      "delay_ms": {
+        "typical": 550,
+        "range": [500, 700],
+        "notes": "Physical limitation due to distance to geostationary orbit (35,786 km)."
+      },
+      "loss_percent": {
+        "typical": 0.8,
+        "range": [0.3, 1.5],
+        "notes": "Weather-dependent, increases during precipitation."
+      },
+      "queue_pkts": {
+        "typical": 200,
+        "range": [150, 300],
+        "notes": "Optimized for high-latency environments."
+      },
+      "low_queue_pkts": {
+        "typical": 50,
+        "range": [30, 80],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 150,
+        "range": [100, 250],
+        "notes": "Atmospheric conditions and satellite movement contribute to variability."
+      }
+    },
+    "4g_lte": {
+      "band_mbps": {
+        "typical": 25,
+        "range": [10, 50],
+        "notes": "Highly dependent on signal strength, congestion, and carrier implementation."
+      },
+      "delay_ms": {
+        "typical": 45,
+        "range": [30, 80],
+        "notes": "Increases with network congestion and distance from tower."
+      },
+      "loss_percent": {
+        "typical": 0.5,
+        "range": [0.2, 1.5],
+        "notes": "Higher in areas with poor coverage or during handovers."
+      },
+      "queue_pkts": {
+        "typical": 500,
+        "range": [300, 700],
+        "notes": "Larger buffers to handle mobility and varying signal conditions."
+      },
+      "low_queue_pkts": {
+        "typical": 100,
+        "range": [50, 150],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 15,
+        "range": [8, 30],
+        "notes": "Increases during handovers and in congested networks."
+      }
+    },
+    "dsl_vdsl": {
+      "band_mbps": {
+        "typical": 35,
+        "range": [20, 70],
+        "notes": "Highly dependent on distance from DSLAM, with significant degradation beyond 1km."
+      },
+      "delay_ms": {
+        "typical": 20,
+        "range": [10, 35],
+        "notes": "Lower latency than ADSL due to improved technology."
+      },
+      "loss_percent": {
+        "typical": 0.15,
+        "range": [0.05, 0.4],
+        "notes": "Improved error correction compared to ADSL."
+      },
+      "queue_pkts": {
+        "typical": 350,
+        "range": [250, 500],
+        "notes": "Optimized buffer sizes for improved performance."
+      },
+      "low_queue_pkts": {
+        "typical": 70,
+        "range": [40, 100],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 3,
+        "range": [1.5, 6],
+        "notes": "More stable than ADSL with less variation."
+      }
+    }
+  },
+  "middle": {
+    "4g_lte_advanced": {
+      "band_mbps": {
+        "typical": 50,
+        "range": [30, 150],
+        "notes": "Carrier aggregation enables higher speeds than standard LTE."
+      },
+      "delay_ms": {
+        "typical": 40,
+        "range": [25, 60],
+        "notes": "Improved latency over standard LTE through protocol optimizations."
+      },
+      "loss_percent": {
+        "typical": 0.4,
+        "range": [0.1, 1.0],
+        "notes": "Improved error correction compared to standard LTE."
+      },
+      "queue_pkts": {
+        "typical": 500,
+        "range": [300, 700],
+        "notes": "Similar buffer sizes to standard LTE."
+      },
+      "low_queue_pkts": {
+        "typical": 100,
+        "range": [50, 150],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 12,
+        "range": [6, 25],
+        "notes": "Improved stability over standard LTE."
+      }
+    },
+    "satellite_leo_starlink": {
+      "band_mbps": {
+        "typical": 120,
+        "range": [50, 300],
+        "notes": "Significant variability based on Speedtest measurements from 2023-2024."
+      },
+      "delay_ms": {
+        "typical": 35,
+        "range": [20, 80],
+        "notes": "Satellite handovers occur approximately every 15 seconds, causing latency spikes."
+      },
+      "loss_percent": {
+        "typical": 1.4,
+        "range": [0.5, 3.0],
+        "notes": "Higher than original estimate; packet loss primarily occurs during satellite handovers."
+      },
+      "queue_pkts": {
+        "typical": 200,
+        "range": [150, 300],
+        "notes": "Deep buffers to accommodate satellite handovers."
+      },
+      "low_queue_pkts": {
+        "typical": 50,
+        "range": [30, 80],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 6.7,
+        "range": [4, 30],
+        "notes": "Average variation between RTT intervals, with spikes during handovers."
+      }
+    },
+    "cable_docsis_3.0": {
+      "band_mbps": {
+        "typical": 100,
+        "range": [50, 300],
+        "notes": "Dependent on number of bonded channels and network congestion."
+      },
+      "delay_ms": {
+        "typical": 15,
+        "range": [8, 30],
+        "notes": "Increases during network congestion."
+      },
+      "loss_percent": {
+        "typical": 0.1,
+        "range": [0.05, 0.3],
+        "notes": "Modern cable systems have improved error correction."
+      },
+      "queue_pkts": {
+        "typical": 600,
+        "range": [400, 800],
+        "notes": "Larger buffers to handle shared medium contention."
+      },
+      "low_queue_pkts": {
+        "typical": 120,
+        "range": [80, 200],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 5,
+        "range": [2, 15],
+        "notes": "Increases during peak usage periods."
+      }
+    }
+  },
+  "high": {
+    "wifi_80211ac": {
+      "band_mbps": {
+        "typical": 300,
+        "range": [150, 800],
+        "notes": "Highly dependent on channel width, spatial streams, and client capabilities."
+      },
+      "delay_ms": {
+        "typical": 4,
+        "range": [2, 10],
+        "notes": "Increases with distance from access point and interference."
+      },
+      "loss_percent": {
+        "typical": 0.3,
+        "range": [0.1, 1.0],
+        "notes": "Higher in environments with interference or at range edges."
+      },
+      "queue_pkts": {
+        "typical": 1000,
+        "range": [500, 1500],
+        "notes": "Large buffers to handle varying wireless conditions."
+      },
+      "low_queue_pkts": {
+        "typical": 100,
+        "range": [50, 200],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 3,
+        "range": [1, 8],
+        "notes": "Increases with network congestion and interference."
+      }
+    },
+    "5g_sub6": {
+      "band_mbps": {
+        "typical": 200,
+        "range": [100, 500],
+        "notes": "Dependent on spectrum allocation, signal strength, and network implementation."
+      },
+      "delay_ms": {
+        "typical": 15,
+        "range": [10, 30],
+        "notes": "Significantly improved over 4G technologies."
+      },
+      "loss_percent": {
+        "typical": 0.2,
+        "range": [0.05, 0.5],
+        "notes": "Advanced error correction provides improved reliability."
+      },
+      "queue_pkts": {
+        "typical": 500,
+        "range": [300, 800],
+        "notes": "Optimized buffer sizes for low-latency applications."
+      },
+      "low_queue_pkts": {
+        "typical": 100,
+        "range": [50, 200],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 6,
+        "range": [3, 15],
+        "notes": "More stable than 4G but still affected by network conditions."
+      }
+    },
+    "gigabit_ethernet": {
+      "band_mbps": {
+        "typical": 940,
+        "range": [900, 980],
+        "notes": "Overhead reduces theoretical 1000 Mbps to practical ~940 Mbps."
+      },
+      "delay_ms": {
+        "typical": 0.3,
+        "range": [0.1, 1.0],
+        "notes": "Extremely low latency for local connections."
+      },
+      "loss_percent": {
+        "typical": 0.001,
+        "range": [0, 0.01],
+        "notes": "Negligible packet loss in properly functioning networks."
+      },
+      "queue_pkts": {
+        "typical": 1000,
+        "range": [500, 2000],
+        "notes": "Large buffers to handle traffic bursts."
+      },
+      "low_queue_pkts": {
+        "typical": 100,
+        "range": [50, 200],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 0.1,
+        "range": [0, 0.5],
+        "notes": "Extremely stable with minimal variation."
+      }
+    }
+  },
+  "ultra": {
+    "5g_mmwave": {
+      "band_mbps": {
+        "typical": 1500,
+        "range": [800, 3000],
+        "notes": "Extremely high bandwidth but limited by range and obstacles."
+      },
+      "delay_ms": {
+        "typical": 10,
+        "range": [5, 20],
+        "notes": "Ultra-low latency when signal conditions are optimal."
+      },
+      "loss_percent": {
+        "typical": 0.5,
+        "range": [0.1, 2.0],
+        "notes": "Higher loss rates due to sensitivity to obstacles and weather."
+      },
+      "queue_pkts": {
+        "typical": 600,
+        "range": [300, 1000],
+        "notes": "Optimized for high-bandwidth, low-latency applications."
+      },
+      "low_queue_pkts": {
+        "typical": 120,
+        "range": [60, 200],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 4,
+        "range": [2, 10],
+        "notes": "Increases significantly when signal is obstructed."
+      }
+    },
+    "fiber_ftth": {
+      "band_mbps": {
+        "typical": 940,
+        "range": [500, 10000],
+        "notes": "Ranges from 500 Mbps to 10 Gbps depending on service tier."
+      },
+      "delay_ms": {
+        "typical": 2,
+        "range": [1, 5],
+        "notes": "Extremely low latency for residential connections."
+      },
+      "loss_percent": {
+        "typical": 0.001,
+        "range": [0, 0.01],
+        "notes": "Negligible packet loss in properly functioning networks."
+      },
+      "queue_pkts": {
+        "typical": 1000,
+        "range": [500, 2000],
+        "notes": "Large buffers to handle traffic bursts."
+      },
+      "low_queue_pkts": {
+        "typical": 100,
+        "range": [50, 200],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 0.2,
+        "range": [0.1, 1.0],
+        "notes": "Extremely stable with minimal variation."
+      }
+    },
+    "10gig_ethernet": {
+      "band_mbps": {
+        "typical": 9400,
+        "range": [9000, 9800],
+        "notes": "Overhead reduces theoretical 10000 Mbps to practical ~9400 Mbps."
+      },
+      "delay_ms": {
+        "typical": 0.1,
+        "range": [0.05, 0.3],
+        "notes": "Extremely low latency for local connections."
+      },
+      "loss_percent": {
+        "typical": 0.0001,
+        "range": [0, 0.001],
+        "notes": "Negligible packet loss in properly functioning networks."
+      },
+      "queue_pkts": {
+        "typical": 2000,
+        "range": [1000, 4000],
+        "notes": "Very large buffers to handle high-bandwidth traffic bursts."
+      },
+      "low_queue_pkts": {
+        "typical": 200,
+        "range": [100, 400],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 0.05,
+        "range": [0, 0.2],
+        "notes": "Extremely stable with minimal variation."
+      }
+    },
+    "wifi_80211ax": {
+      "band_mbps": {
+        "typical": 800,
+        "range": [400, 2000],
+        "notes": "Wi-Fi 6 (802.11ax) offers significant improvements over 802.11ac."
+      },
+      "delay_ms": {
+        "typical": 2,
+        "range": [1, 5],
+        "notes": "Significantly improved latency over previous Wi-Fi generations."
+      },
+      "loss_percent": {
+        "typical": 0.1,
+        "range": [0.05, 0.3],
+        "notes": "Improved reliability through OFDMA and MU-MIMO enhancements."
+      },
+      "queue_pkts": {
+        "typical": 1200,
+        "range": [800, 2000],
+        "notes": "Optimized buffer management for multiple simultaneous clients."
+      },
+      "low_queue_pkts": {
+        "typical": 150,
+        "range": [100, 300],
+        "notes": "Minimum buffer allocation."
+      },
+      "jitter_ms": {
+        "typical": 1.5,
+        "range": [0.5, 4],
+        "notes": "Significantly improved over previous Wi-Fi generations."
+      }
+    }
+  },
+  "singapore_fixed_broadband": {
+    "band_mbps": {
+      "typical": 368.50,
+      "range": [250, 500],
+      "notes": "Singapore ranks 1st globally with exceptional fiber infrastructure and high investment in connectivity."
+    },
+    "delay_ms": {
+      "typical": 4,
+      "range": [2, 8],
+      "notes": "Extremely low latency due to advanced infrastructure and Singapore's strategic position as a regional internet hub."
+    },
+    "loss_percent": {
+      "typical": 0.05,
+      "range": [0.01, 0.15],
+      "notes": "Very low packet loss due to high-quality infrastructure and short transmission distances."
+    },
+    "queue_pkts": {
+      "typical": 1500,
+      "range": [1000, 2500],
+      "notes": "Large buffer sizes to accommodate high bandwidth applications and traffic spikes."
+    },
+    "low_queue_pkts": {
+      "typical": 200,
+      "range": [150, 350],
+      "notes": "Minimum buffer allocation optimized for high-throughput networks."
+    },
+    "jitter_ms": {
+      "typical": 0.8,
+      "range": [0.3, 1.5],
+      "notes": "Minimal jitter due to consistent routing and high-quality infrastructure."
+    }
+  },
+    "greece_fixed_broadband": {
+    "band_mbps": {
+      "typical": 68.76,
+      "range": [45, 100],
+      "notes": "Greece ranks 93rd globally with ongoing infrastructure improvements in urban areas."
+    },
+    "delay_ms": {
+      "typical": 10,
+      "range": [8, 15],
+      "notes": "Moderate latency affected by geographic location and varying infrastructure quality."
+    },
+    "loss_percent": {
+      "typical": 0.3,
+      "range": [0.15, 0.8],
+      "notes": "Moderate packet loss due to mixed infrastructure quality and ongoing network upgrades."
+    },
+    "queue_pkts": {
+      "typical": 800,
+      "range": [500, 1200],
+      "notes": "Medium buffer sizes reflecting moderate bandwidth requirements."
+    },
+    "low_queue_pkts": {
+      "typical": 120,
+      "range": [80, 200],
+      "notes": "Minimum buffer allocation for moderate-throughput networks."
+    },
+    "jitter_ms": {
+      "typical": 2.5,
+      "range": [1.5, 5],
+      "notes": "Moderate jitter due to varying infrastructure quality across regions."
+    }
+  },
+  "cuba_fixed_broadband": {
+    "band_mbps": {
+      "typical": 3.35,
+      "range": [2, 5],
+      "notes": "Cuba ranks 154th globally with limited infrastructure and international connectivity constraints."
+    },
+    "delay_ms": {
+      "typical": 108,
+      "range": [80, 150],
+      "notes": "High latency due to limited international connectivity and aging infrastructure."
+    },
+    "loss_percent": {
+      "typical": 2.5,
+      "range": [1.5, 5],
+      "notes": "Significant packet loss due to congestion and limited infrastructure capacity."
+    },
+    "queue_pkts": {
+      "typical": 400,
+      "range": [250, 600],
+      "notes": "Smaller buffer sizes reflecting limited bandwidth and infrastructure constraints."
+    },
+    "low_queue_pkts": {
+      "typical": 80,
+      "range": [50, 120],
+      "notes": "Minimum buffer allocation for low-throughput networks."
+    },
+    "jitter_ms": {
+      "typical": 15,
+      "range": [8, 25],
+      "notes": "High jitter due to network congestion and varying infrastructure quality."
+    }
+  }
+}
