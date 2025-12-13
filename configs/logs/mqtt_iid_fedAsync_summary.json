@@ -1,0 +1,9 @@
+{
+  "config_file": "/home/redondi/FederNet/configs/async-iid-mqtt/mqtt_iid_fedAsync.yaml",
+  "log_file": "/home/redondi/FederNet/configs/logs/mqtt_iid_fedAsync_20251129_162627.log",
+  "start_time": "2025-11-29T16:26:27.473757",
+  "end_time": "2025-11-29T16:29:37.362874",
+  "duration_seconds": 189.889117,
+  "return_code": 0,
+  "status": "success"
+}

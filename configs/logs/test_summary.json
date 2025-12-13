@@ -1,0 +1,9 @@
+{
+  "config_file": "/home/redondi/FederNet/configs/sync-mqtt/test.yaml",
+  "log_file": "/home/redondi/FederNet/configs/logs/test_20251127_150710.log",
+  "start_time": "2025-11-27T15:07:10.086875",
+  "end_time": "2025-11-27T15:16:51.037732",
+  "duration_seconds": 580.950857,
+  "return_code": 0,
+  "status": "success"
+}

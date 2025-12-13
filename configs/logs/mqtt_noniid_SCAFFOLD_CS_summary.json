@@ -1,0 +1,9 @@
+{
+  "config_file": "/home/redondi/FederNet/configs/sync-mqtt/mqtt_noniid_SCAFFOLD_CS.yaml",
+  "log_file": "/home/redondi/FederNet/configs/logs/mqtt_noniid_SCAFFOLD_CS_20251128_155804.log",
+  "start_time": "2025-11-28T15:58:04.018257",
+  "end_time": "2025-11-28T16:01:23.081952",
+  "duration_seconds": 199.063695,
+  "return_code": 0,
+  "status": "success"
+}

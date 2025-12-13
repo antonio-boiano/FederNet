@@ -1,0 +1,59 @@
+# =============================================================================
+# Simple Flower setup with 1 server + 2 clients using FedAvg strategy.
+# =============================================================================
+
+containernet:
+  num_containers: 3  # 1 server + 2 clients
+
+  image_name: flwr/base:1.24.0-py3.11-ubuntu24.04
+  
+  # Device profiles
+  device_type:
+    - none           # Container 0 (server) - full resources
+    - rpi4           # Container 1 (client-1) - edge device
+    - rpi5           # Container 2 (client-2) - edge device
+  
+  # Network profiles
+  network_type:
+    - none           # Container 0 (server) - no limitations
+    - wifi_80211ac   # Container 1 (client-1)
+    - 4g_lte         # Container 2 (client-2)
+  
+  host_single_core_score: 1554
+  
+  # Mount the experiment files to all containers
+  volumes:
+    - "./experiments/flower_simple/server.py:/app/server.py"
+    - "./experiments/flower_simple/client.py:/app/client.py"
+    - "./bin/ip:/sbin/ip"
+
+application:
+  name: flower_simple
+  
+  variables:
+    port: 8080
+  
+  roles:
+    server:
+      container_ids: [0]
+      working_dir: /app
+      command: >-
+        bash -lc "pip install --no-cache-dir 'flwr==1.24.0' numpy &&
+                  python server.py"
+      startup_delay: 0
+      wait_for_completion: true
+    
+    clients:
+      container_ids: [1, 2]  # Both clients in same role, start together
+      working_dir: /app
+      command: >-
+        bash -lc "export CLIENT_ID=client{container_id} &&
+                  export SERVER_ADDRESS={ip_0}:{port} &&
+                  pip install --no-cache-dir 'flwr==1.24.0' numpy &&
+                  python client.py"
+      startup_delay: 10
+      wait_for_completion: true
+
+  role_order:
+    - server
+    - clients

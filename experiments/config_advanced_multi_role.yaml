@@ -1,0 +1,169 @@
+# =============================================================================
+# EXAMPLE: Advanced Multi-Role Configuration
+# =============================================================================
+# This example shows how to set up complex experiments with:
+#   - Multiple server types (aggregator, coordinator)
+#   - Different client groups with different commands
+#   - Custom pre/post commands
+#   - Fine-grained container control
+#
+# Use 'none' for device_type/network_type to indicate no constraints/limitations
+# =============================================================================
+
+containernet:
+  num_containers: 10
+  image_name: myregistry/distributed_ml:latest
+  
+  # Device profiles
+  # 'none' = no CPU/memory constraints (full host resources)
+  device_type:
+    - none               # 0: Main aggregator - full resources
+    - none               # 1: Backup aggregator - full resources
+    - intel_nuc8         # 2: Coordinator
+    - rpi4               # 3-9: Workers
+    - rpi4
+    - rpi5
+    - rpi5
+    - jetson_nano
+    - jetson_nano
+    - jetson_nano
+  
+  # Network conditions
+  # 'none' = no network limitations (unlimited bandwidth, zero delay)
+  network_type:
+    - none               # 0: Aggregator - no limitations
+    - none               # 1: Backup - no limitations
+    - none               # 2: Coordinator - no limitations
+    - wifi_80211ac       # 3-9: Workers - varied conditions
+    - 5g_mmwave
+    - 4g_lte
+    - wifi_80211ac
+    - 5g_sub6
+    - satellite_leo_starlink
+    - 4g_lte_advanced
+  
+  # Resource management
+  host_single_core_score: 2000
+  device_variance: 0.1
+  
+  # Per-container overrides
+  nodes:
+    - id: 0
+      # Main aggregator gets more resources
+      constraints:
+        memory_mb: 8192
+        cpu_quota: 200000
+    
+    - id: 3
+      # Worker 3 has special dataset
+      environment:
+        DATASET_PATH: /data/special_dataset
+        WORKER_TYPE: specialized
+
+application:
+  name: hierarchical_fl_experiment
+  
+  variables:
+    # Common variables
+    protocol: grpc
+    port: 50051
+    coordinator_port: 50052
+    
+    # Training parameters
+    global_rounds: 50
+    local_epochs: 3
+    batch_size: 32
+    learning_rate: 0.01
+    
+    # Aggregation parameters
+    aggregation_method: fedavg
+    min_workers: 5
+  
+  roles:
+    # Primary aggregator
+    aggregator:
+      container_ids: [0]
+      command: >-
+        python3 -u aggregator.py
+        --port {port}
+        --ip {container_ip}
+        --rounds {global_rounds}
+        --min_workers {min_workers}
+        --aggregation {aggregation_method}
+        --coordinator_ip {coordinator_ip}
+        --coordinator_port {coordinator_port}
+      startup_delay: 0
+      wait_for_completion: true
+      pre_commands:
+        - "echo 'Aggregator starting at {container_ip}:{port}'"
+        - "mkdir -p /app/checkpoints"
+    
+    # Backup aggregator (standby)
+    backup_aggregator:
+      container_ids: [1]
+      command: >-
+        python3 -u aggregator.py
+        --port {port}
+        --ip {container_ip}
+        --mode standby
+        --primary_ip {aggregator_ip}
+        --primary_port {port}
+      startup_delay: 5
+      wait_for_completion: true
+    
+    # Coordinator for worker management
+    coordinator:
+      container_ids: [2]
+      command: >-
+        python3 -u coordinator.py
+        --port {coordinator_port}
+        --ip {container_ip}
+        --aggregator_ip {aggregator_ip}
+        --aggregator_port {port}
+        --num_workers 7
+      startup_delay: 10
+      wait_for_completion: true
+    
+    # Regular workers
+    worker:
+      container_ids: [3, 4, 5, 6]
+      command: >-
+        python3 -u worker.py
+        --protocol {protocol}
+        --worker_id {container_id}
+        --coordinator_ip {coordinator_ip}
+        --coordinator_port {coordinator_port}
+        --epochs {local_epochs}
+        --batch_size {batch_size}
+        --lr {learning_rate}
+      startup_delay: 20
+      wait_for_completion: true
+      pre_commands:
+        - "echo 'Worker {container_id} starting with device profile: {device_profile}'"
+    
+    # Resource-constrained workers (different training config)
+    lightweight_worker:
+      container_ids: [7, 8, 9]
+      command: >-
+        python3 -u worker.py
+        --protocol {protocol}
+        --worker_id {container_id}
+        --coordinator_ip {coordinator_ip}
+        --coordinator_port {coordinator_port}
+        --epochs 1
+        --batch_size 16
+        --lr {learning_rate}
+        --lightweight_mode
+      startup_delay: 25
+      wait_for_completion: true
+  
+  # Execution order
+  role_order:
+    - aggregator
+    - backup_aggregator
+    - coordinator
+    - worker
+    - lightweight_worker
+
+# Enable monitoring
+enable_tcpdump: true

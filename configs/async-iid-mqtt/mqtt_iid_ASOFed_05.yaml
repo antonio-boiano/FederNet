@@ -1,0 +1,19 @@
+clients: 24
+max_time: 14400
+experiment_name: mqtt_iid_ASOFed_05
+image_name: anboiano/fedopt:latest
+protocol: mqtt
+network_type: [wifi_80211ac, 4g_lte_advanced,satellite_leo_starlink,satellite_geo,4g_lte,5g_sub6,wifi_80211ac, 4g_lte_advanced,satellite_leo_starlink,satellite_geo,4g_lte,5g_sub6,wifi_80211ac, 4g_lte_advanced,satellite_leo_starlink,satellite_geo,4g_lte,5g_sub6,wifi_80211ac, 4g_lte_advanced,satellite_leo_starlink,satellite_geo,4g_lte,5g_sub6]
+device_type: [rpi4, rpi4, rpi4, rpi4,rpi4,rpi4,rpi5,rpi5,rpi5, rpi5, rpi5, rpi5,intel_nuc8, intel_nuc8, intel_nuc8,intel_nuc8, intel_nuc8,intel_nuc8,jetson_nano,jetson_nano,jetson_nano,jetson_nano,jetson_nano,jetson_nano]
+host_single_core_score: 1554
+device_variance: 0.05
+ 
+fl_method: ASOFed
+alpha: 10
+client_selection: false
+
+server_config:
+  min_client_to_start: 10
+  client_round: 10
+
+asofed_beta: 0.5

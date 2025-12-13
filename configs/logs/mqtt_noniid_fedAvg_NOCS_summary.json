@@ -1,0 +1,9 @@
+{
+  "config_file": "/home/redondi/FederNet/configs/sync-mqtt/mqtt_noniid_fedAvg_NOCS.yaml",
+  "log_file": "/home/redondi/FederNet/configs/logs/mqtt_noniid_fedAvg_NOCS_20251128_115438.log",
+  "start_time": "2025-11-28T11:54:38.047296",
+  "end_time": "2025-11-28T15:58:02.246818",
+  "duration_seconds": 14604.199522,
+  "return_code": 0,
+  "status": "success"
+}

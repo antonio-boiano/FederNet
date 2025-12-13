@@ -34,47 +34,7 @@ FederNet is a flexible emulation framework for research and development of distr
 
 ## Usage
 
-### Web-Based Configuration UI
-
-FederNet provides a user-friendly web interface to configure and run experiments without manually editing YAML files.
-
-**Starting the UI:**
-
-You can launch the web interface using either:
-
-1. The quickstart script (recommended):
-   ```bash
-   bash src/quickstart_script.sh
-   ```
-
-2. Or directly with Python:
-   ```bash
-   python3 src/web_server.py
-   ```
-
-Once started, open your browser to `http://localhost:5000` to access the configuration interface.
-
-**UI Features:**
-- Complete federated learning framework configuration (FL method, alpha, rounds, client selection, etc.)
-- Per-client device and network configuration with presets (Raspberry Pi, Jetson Nano, WiFi, 4G, etc.)
-- MQTT broker deployment options (on parameter server or separate container)
-- Custom Docker images and commands per node
-- Bulk configuration for all clients
-- Network monitoring with tcpdump
-- Save/load configuration files
-- Generate YAML files compatible with `run.py`
-
-![Web UI Example](src/resources/ui-example.jpg)
-
-After configuring your experiment in the UI, click "Save & Generate YAML" to create a configuration file. The generated YAML can then be executed using:
-
-```bash
-sudo python3 src/run.py src/configs/<your_config_file>.yaml
-```
-
-### Command-Line Usage
-
-For advanced users or automated workflows, you can run experiments directly with YAML configs:
+Run an emulation experiment with:
 
 ```bash
 sudo python3 src/run.py <config_or_folder>
@@ -88,7 +48,6 @@ sudo python3 src/run.py <config_or_folder>
 
 ### Main scripts
 
-- `src/web_server.py`: Web-based configuration UI for creating experiment configs.
 - `src/emulation.py`: Core logic for network and device emulation. Supports CLI arguments for config file, output directory, and interactive mode.
 - `src/run.py`: Batch runner for running one or more config files.
 - `src/network_debug.py`: Alternative entry point for debugging and network profiling.
@@ -145,3 +104,5 @@ client_selection: false
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
+
+**Note:** See example YAML configs in the `configs/` directory and refer to the source code in `src/` for advanced usage or extending device/network profiles.

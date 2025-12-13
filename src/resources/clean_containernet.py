@@ -3,13 +3,13 @@ def clean_session():
     import os.path
     import subprocess
 
-    PATH_MN = "home/antoniob/flux/containernet/bin/mn"
+    PATH_MN = os.path.expanduser("")
 
     exec_script = PATH_MN + ' -c'
     if os.path.exists(PATH_MN):
         subprocess.run(exec_script, shell=True)
     else:
-        os.system("sudo mn -c")
+        os.system("mn -c")
 
     from mininet.net import Containernet
     from mininet.node import Controller

@@ -22,12 +22,21 @@ import yaml
 import docker
 import argparse
 import random
-from resources.performance import device_profile,network_profile
+from resources.performance import (
+    device_profile, 
+    network_profile,
+    ContainerResourceManager,
+    CPUAllocator,
+    load_profile_data,
+    perturb_device
+)
 
 first = False
 
 # FIXED/DEFAULT values
 PWD = os.getcwd()
+OUTPUT_ROOT = os.path.join(PWD, "..","output")
+
 D_IMAGE_NAME = "fed_opt"
 FL_TYPE = "fed_opt"
 CLIENTS = 10
@@ -57,7 +66,6 @@ timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
 # Global configuration variables
 alpha = None
-fl_method = "None_Experiment"
 clients = CLIENTS
 image_name = D_IMAGE_NAME
 protocol = PROTOCOL
@@ -71,13 +79,19 @@ device_variance = 0.2
 folder_name = "./"
 
 # New configuration variables
-enable_tcpdump = True
+enable_tcpdump = False
 tcp_dump_first = False
 enable_mqtt = False
 mqtt_config = {}
 node_configs = []
 executed_commands = []  # Store all executed commands for logging
 mqtt_broker_container = None  # Global reference to broker container
+
+cpu_spread_threshold = 0.8  # Spread containers if total load < 50% of host cores
+default_cores_per_container = 4  # Default cores when no device profile specified
+default_ram_gib = 8.0  # Default RAM (GiB) when no device profile specified
+allow_overscaling = False  # If True, faster devices get more cores (4-core @ 2x → 8 cores)
+resource_manager = None  # Will be initialized after config parsing
 
 # Parse the config file yaml
 if config:
@@ -102,10 +116,15 @@ if config:
     device_variance = config_data.get('device_variance', 0.2)
     
     # New configuration options
-    enable_tcpdump = config_data.get('enable_tcpdump', True)
+    enable_tcpdump = config_data.get('enable_tcpdump', False)
     enable_mqtt = config_data.get('enable_mqtt', False)
     mqtt_config = config_data.get('mqtt_config', {})
     node_configs = config_data.get('nodes', [])
+    
+    cpu_spread_threshold = config_data.get('cpu_spread_threshold', 0.5)
+    default_cores_per_container = config_data.get('default_cores_per_container', 1)
+    default_ram_gib = config_data.get('default_ram_gib', 2.0)
+    allow_overscaling = config_data.get('allow_overscaling', False)
     
     if type(device_type) is list:
         device_type_str = device_type[0]
@@ -118,6 +137,9 @@ if config:
     config_base = os.path.splitext(os.path.basename(config_abs))[0]
     folder_name = os.path.relpath(config_dir, PWD)
     
+    info(f"Config directory: {config_dir}\n")
+    info(f"Config base name: {config_base}\n")
+    info(f"Output folder name: {folder_name}\n")
     
 
 image_name_str = image_name.split("/")[-1] if "/" in image_name else image_name
@@ -133,16 +155,289 @@ info(f"*** Using {device_type} device type\n")
 info(f"*** Using {host_single_core_score} single core score\n")
 info(f"*** tcpdump enabled: {enable_tcpdump}\n")
 info(f"*** MQTT enabled: {enable_mqtt}\n")
+info(f"*** CPU spread threshold: {cpu_spread_threshold}\n")
 
-output_dir_name = "{}_{}_C{}_{}_{}_{}".format(
+
+folder_name_clean = folder_name
+
+while folder_name_clean.startswith("../"):
+    folder_name_clean = folder_name_clean[3:]  # Remove "../"
+while folder_name_clean.startswith("..\\"):  # Windows compatibility
+    folder_name_clean = folder_name_clean[3:]  # Remove "..\\"
+
+output_dir_name_single = "{}_{}_C{}_{}_{}_{}".format(
     timestamp, image_name_str, clients, 
     str(ntw_type_str), str(device_type_str), str(experiment_name)
 )
-output_dir_name = os.path.join(folder_name, output_dir_name)
+
+output_dir_name = os.path.join(OUTPUT_ROOT,folder_name_clean)
+
+output_dir_name = os.path.join(output_dir_name, output_dir_name_single)
+
+os.makedirs(output_dir_name, exist_ok=True)
+
+
+# =============================================================================
+# Initialize the ContainerResourceManager for smart CPU allocation
+# =============================================================================
+
+def initialize_resource_manager():
+    """Initialize the resource manager with device profiles for all containers."""
+    global resource_manager, device_type
+    
+    host_cores = os.cpu_count() or 1
+    
+    resource_manager = ContainerResourceManager(
+        host_score=host_single_core_score,
+        client_count=clients + 1,  # +1 for parameter server
+        host_cores=host_cores,
+        spread_threshold=cpu_spread_threshold,
+        device_variation=device_variance,
+        allow_overscaling=allow_overscaling
+    )
+    
+    info(f"*** Initialized CPU Resource Manager: {host_cores} cores, "
+         f"score {host_single_core_score}, spread threshold {cpu_spread_threshold}\n")
+    info(f"*** Default allocation (no device): {default_cores_per_container} cores, {default_ram_gib} GiB RAM\n")
+    info(f"*** Allow overscaling (faster devices get more cores): {allow_overscaling}\n")
+    
+    # Pre-register all containers with their device profiles
+    for idx in range(clients + 1):
+        container_name = f"{fl_type}{idx}"
+        node_config = get_node_config(idx)
+        
+        # Determine device spec for this container
+        current_device_type = device_type
+        if node_config and 'device_type' in node_config:
+            current_device_type = node_config['device_type']
+        
+        if current_device_type is not None:
+            # Handle list of device types
+            if isinstance(current_device_type, list):
+                try:
+                    dev_name = current_device_type[idx - 1] if idx > 0 else current_device_type[0]
+                except IndexError:
+                    dev_name = current_device_type[-1]
+            else:
+                dev_name = current_device_type
+            
+            resource_manager.add_container(container_name, device_name=dev_name, idx=idx)
+            info(f"*** Registered {container_name} with device profile: {dev_name}\n")
+        else:
+            # No device profile - use default minimal allocation
+            resource_manager.add_container(
+                container_name, 
+                device_spec=None, 
+                idx=idx,
+                default_cores=default_cores_per_container,
+                default_ram_gib=default_ram_gib
+            )
+            info(f"*** Registered {container_name} with default allocation: {default_cores_per_container} cores\n")
+    
+    # Plan all allocations (this determines spread vs share mode)
+    resource_manager.plan_allocations()
+    
+    # Log allocation summary
+    summary = resource_manager.get_allocation_summary()
+    info(f"\n*** CPU Allocation Summary:\n")
+    
+    total_used = sum(c['used_capacity'] for c in summary['core_usage'])
+    info(f"    Total effective cores used: {total_used:.2f} / {host_cores}\n")
+    
+    # Show which cores are being used
+    active_cores = [c for c in summary['core_usage'] if c['used_capacity'] > 0]
+    if active_cores:
+        info(f"    Active cores: {len(active_cores)}\n")
+        for core in active_cores:
+            info(f"      Core {core['core_id']}: {core['used_capacity']:.2f} capacity, "
+                 f"{len(core['containers'])} containers\n")
+    
+    return resource_manager
+
+def save_container_configs(container_list_full, output_dir):
+    """Save detailed configuration for each container."""
+    configs = []
+    
+    for container_info in container_list_full:
+        container_cls = container_info["cls"]
+        node_config = get_node_config(container_cls.id)
+        
+        # Determine device type for this container
+        current_device_type = device_type
+        if node_config and 'device_type' in node_config:
+            current_device_type = node_config['device_type']
+        
+        if isinstance(current_device_type, list):
+            try:
+                dev_name = current_device_type[container_cls.id - 1] if container_cls.id > 0 else current_device_type[0]
+            except IndexError:
+                dev_name = current_device_type[-1]
+        else:
+            dev_name = current_device_type if current_device_type else "none"
+        
+        # Determine network type for this container
+        current_network_type = ntw_type
+        if node_config and 'link' in node_config:
+            current_network_type = "custom"
+        elif isinstance(ntw_type, list):
+            try:
+                net_name = ntw_type[container_cls.id - 1] if container_cls.id > 0 else ntw_type[0]
+            except IndexError:
+                net_name = ntw_type[-1]
+            current_network_type = net_name
+        else:
+            net_name = ntw_type if ntw_type else "none"
+        
+        config = {
+            'container_name': container_cls.name,
+            'container_id': container_cls.id,
+            'ip_address': container_cls.address_2,
+            'device_type': str(dev_name),
+            'network_type': str(current_network_type),
+            'image': container_cls.custom_image,
+            'cpu_constraints': {
+                'cpu_period': container_cls.cpu_period,
+                'cpu_quota': container_cls.cpu_quota,
+                'cpu_share': container_cls.cpu_share,
+                'nano_cpu': container_cls.nano_cpu,
+                'cpu_cores': container_cls.cpu,
+                'cpuset_cpus': container_cls.cpuset_cpus
+            },
+            'memory_limit': container_cls.ram,
+            'custom_command': container_cls.custom_command
+        }
+        
+        # Add resource manager info if available
+        if resource_manager:
+            rm_config = resource_manager.get_container_config(container_cls.name)
+            if rm_config:
+                config['resource_manager'] = {
+                    'effective_cpus': rm_config.get('EffectiveCpus'),
+                    'allocation_mode': rm_config.get('AllocationMode'),
+                    'device_score': rm_config.get('DeviceScore')
+                }
+        
+        configs.append(config)
+    
+    # Save to file
+    config_file = f"{output_dir}/container_configs.json"
+    os.makedirs(os.path.dirname(config_file), exist_ok=True)
+    with open(config_file, 'w') as f:
+        json.dump(configs, f, indent=2)
+    
+    info(f"*** Container configurations saved to {config_file}\n")
+    return configs
+
+def save_network_allocations(container_list_full, routers, output_dir):
+    """Save network configuration and topology for each container."""
+    network_configs = {
+        'topology': {
+            'total_routers': len(routers),
+            'total_containers': len(container_list_full),
+            'router_links': []
+        },
+        'containers': []
+    }
+    
+    # Document router-to-router links
+    for router in routers:
+        router_info = {
+            'router_id': router.id,
+            'router_name': router.name,
+            'network': str(router.networkIP),
+            'main_ip': router.mainIP,
+            'links_to': []
+        }
+        
+        for bind in router.routing_binding:
+            link_info = {
+                'destination_network': str(bind[0]),
+                'via_ip': bind[1],
+                'interface': bind[2]
+            }
+            router_info['links_to'].append(link_info)
+        
+        network_configs['topology']['router_links'].append(router_info)
+    
+    # Document container network configurations
+    for container_info in container_list_full:
+        container_cls = container_info["cls"]
+        node_config = get_node_config(container_cls.id)
+        
+        # Determine network type for this container
+        current_network_type = ntw_type
+        node_link_config = node_config.get('link', {})
+        
+        if isinstance(ntw_type, list):
+            try:
+                net_type = ntw_type[container_cls.id - 1] if container_cls.id > 0 else ntw_type[0]
+            except IndexError:
+                net_type = ntw_type[-1]
+            current_network_type = net_type
+        
+        # Get network profile details
+        if current_network_type and not node_link_config:
+            ntw_prof = network_profile(current_network_type, container_cls.id)
+            delay = ntw_prof['delay_ms']
+            bw = ntw_prof['band_mbps']
+            jitter = ntw_prof['jitter_ms']
+            loss = ntw_prof.get('loss_percent', 0)
+        elif node_link_config:
+            delay = node_link_config.get('delay_ms', ROUTER_DELAY_MS)
+            bw = node_link_config.get('bandwidth_mbps', ROUTER_BW)
+            jitter = node_link_config.get('jitter_ms', ROUTER_JIT)
+            loss = node_link_config.get('loss_percent', 0)
+        else:
+            delay = ROUTER_DELAY_MS
+            bw = ROUTER_BW
+            jitter = ROUTER_JIT
+            loss = 0
+        
+        container_net_config = {
+            'container_name': container_cls.name,
+            'container_id': container_cls.id,
+            'ip_address': container_cls.address_2,
+            'subnet': container_cls.address,
+            'default_gateway': container_cls.default_route,
+            'router_id': container_cls.id,
+            'network_type': str(current_network_type) if current_network_type else "default",
+            'link_characteristics': {
+                'delay_ms': delay,
+                'bandwidth_mbps': bw,
+                'jitter_ms': jitter,
+                'loss_percent': loss
+            },
+            'custom_link_config': bool(node_link_config)
+        }
+        
+        network_configs['containers'].append(container_net_config)
+    
+    # Calculate network statistics
+    delays = [c['link_characteristics']['delay_ms'] for c in network_configs['containers']]
+    bandwidths = [c['link_characteristics']['bandwidth_mbps'] for c in network_configs['containers']]
+    
+    network_configs['statistics'] = {
+        'avg_delay_ms': sum(delays) / len(delays) if delays else 0,
+        'min_delay_ms': min(delays) if delays else 0,
+        'max_delay_ms': max(delays) if delays else 0,
+        'avg_bandwidth_mbps': sum(bandwidths) / len(bandwidths) if bandwidths else 0,
+        'min_bandwidth_mbps': min(bandwidths) if bandwidths else 0,
+        'max_bandwidth_mbps': max(bandwidths) if bandwidths else 0,
+    }
+    
+    # Save to file
+    network_file = f"{output_dir}/network_allocations.json"
+    os.makedirs(os.path.dirname(network_file), exist_ok=True)
+    with open(network_file, 'w') as f:
+        json.dump(network_configs, f, indent=2)
+    
+    info(f"*** Network allocations saved to {network_file}\n")
+    return network_configs
+
 
 class MyContainer:
     def __init__(self, _id, fl_type, router_ip, node_config=None, cpu_period=0, cpu_share=0, 
-                 cpu_quota=0, nano_cpu=0, cpu=0, ram=""):
+                 cpu_quota=0, nano_cpu=0, cpu=0, ram="", cpuset_cpus=None):
         self.fl_type = fl_type
         self.id = _id
         self.name = "{}{}".format(self.fl_type, self.id)
@@ -166,7 +461,7 @@ class MyContainer:
         self.nano_cpu = constraints.get('nano_cpu', nano_cpu)
         self.cpu = constraints.get('cpu_cores', cpu)
         self.ram = f"{constraints.get('memory_mb', 512)}m" if constraints.get('memory_mb') else ram
-        
+        self.cpuset_cpus = constraints.get('cpuset_cpus', cpuset_cpus)
 
     def get_master(self):
         return self.master
@@ -307,7 +602,7 @@ def create_mqtt_broker(ps_router):
         name='mqtt_broker',
         ip=broker_ip,
         dimage=broker_image,
-        volumes=["{}/output/{}:/app/saved_output".format(PWD, output_dir_name)],
+        volumes=["{}:/app/saved_output".format(output_dir_name)],
         privileged=True
     )
     
@@ -323,18 +618,35 @@ def create_mqtt_broker(ps_router):
     return mqtt_broker_container, broker_ip_only
 
 def create_containers(fl_type, _routers, host_list=None):
-    global device_type
+    global device_type, resource_manager
+
     def setup_container(container):
-        dck = net.addDocker(
-            name=container.name, 
-            ip=container.address, 
-            dimage=container.custom_image,
-            volumes=["{}/output/{}:/app/saved_output".format(PWD, output_dir_name)],
-            mem_limit=container.ram,
-            cpu_period=container.cpu_period,
-            cpu_quota=container.cpu_quota,
-            privileged=True
-        )
+        """Set up a Docker container with the appropriate resource constraints."""
+        
+        # Build docker params
+        docker_params = {
+            'name': container.name,
+            'ip': container.address,
+            'dimage': container.custom_image,
+            'volumes': ["{}:/app/saved_output".format(output_dir_name)],
+            'privileged': True,
+        }
+        
+        # Add memory limit if specified
+        if container.ram:
+            docker_params['mem_limit'] = container.ram
+        
+        # Add CPU constraints
+        if container.cpu_period > 0:
+            docker_params['cpu_period'] = container.cpu_period
+        if container.cpu_quota > 0:
+            docker_params['cpu_quota'] = container.cpu_quota
+        
+        if container.cpuset_cpus:
+            docker_params['cpuset_cpus'] = container.cpuset_cpus
+            info(f"*** {container.name}: pinned to cores {container.cpuset_cpus}\n")
+        
+        dck = net.addDocker(**docker_params)
         dck.cmd("ethtool -K eth0 gro off tx off rx off")
         return dck
 
@@ -343,9 +655,33 @@ def create_containers(fl_type, _routers, host_list=None):
 
     for r in _routers:
         node_config = get_node_config(r.id)
+        container_name = f"{fl_type}{r.id}"
         
-        if device_type is not None or (node_config != {} and 'device_type' in node_config):
-                    
+        # Get pre-planned allocation from resource manager
+        if resource_manager is not None:
+            config = resource_manager.get_container_config(container_name)
+            
+            if config:
+                container = MyContainer(
+                    r.id, fl_type, r.networkIP,
+                    node_config={},
+                    cpu_period=int(config['CpuPeriod']),
+                    cpu_quota=int(config['CpuQuota']),
+                    cpu_share=int(config['CpuShares']),
+                    nano_cpu=int(config['NanoCPUs']),
+                    cpu=int(config['Cpus']),
+                    ram=config['Memory'],
+                    cpuset_cpus=config['CpusetCpus']  # NEW: core pinning
+                )
+                
+                info(f"*** {container_name}: effective_cpus={config['EffectiveCpus']:.2f}, "
+                     f"quota={config['CpuQuota']}, cpuset={config['CpusetCpus']}\n")
+            else:
+                # Fallback to legacy behavior
+                container = MyContainer(r.id, fl_type, r.networkIP, node_config=node_config, ram=RAM_LIMIT)
+        
+        elif device_type is not None or (node_config != {} and 'device_type' in node_config):
+            # Legacy behavior when resource manager is not used
             if device_type is None:
                 device_type = node_config['device_type']
                     
@@ -360,7 +696,8 @@ def create_containers(fl_type, _routers, host_list=None):
                 cpu_share=int(device['CpuShares']),
                 nano_cpu=int(device['NanoCPUs']),
                 cpu=int(device['Cpus']),
-                ram=device['Memory']
+                ram=device['Memory'],
+                cpuset_cpus=device.get('CpusetCpus')
             )
             
         else:
@@ -416,6 +753,7 @@ def start_fl(container_list_full, _routers):
         args = [
             add_arg("protocol", config.get('protocol', protocol)),
             add_arg("rounds", config.get('rounds')),
+            add_arg("max_time", config.get('max_time')),
             add_arg("fl_method", config.get('fl_method')),
             add_arg("alpha", config.get('alpha')),
             add_arg("min_clients", config.get('server_config', {}).get('min_client_to_start')),
@@ -447,7 +785,41 @@ def start_fl(container_list_full, _routers):
             cmd = template.replace('{server_address}', str(ctx['server_address']))
             cmd = cmd.replace('{client_address}', str(ctx['client_address']))
             return cmd
+    
+    def get_container_profile_string(cli_cls):
+        """Get a short string representing device and network profile for log names."""
+        # Get device type
+        node_config = get_node_config(cli_cls.id)
+        current_device_type = device_type
+        if node_config and 'device_type' in node_config:
+            current_device_type = node_config['device_type']
         
+        if isinstance(current_device_type, list):
+            try:
+                dev_name = current_device_type[cli_cls.id - 1] if cli_cls.id > 0 else current_device_type[0]
+            except IndexError:
+                dev_name = current_device_type[-1]
+        else:
+            dev_name = current_device_type if current_device_type else "default"
+        
+        # Get network type
+        current_network_type = ntw_type
+        if isinstance(ntw_type, list):
+            try:
+                net_name = ntw_type[cli_cls.id - 1] if cli_cls.id > 0 else ntw_type[0]
+            except IndexError:
+                net_name = ntw_type[-1]
+            current_network_type = net_name
+        else:
+            net_name = ntw_type if ntw_type else "default"
+        
+        # Create short profile string
+        dev_short = str(dev_name).replace(" ", "_")[:15]
+        net_short = str(net_name).replace(" ", "_")[:15]
+        
+        return f"dev_{dev_short}_net_{net_short}"
+
+    
     def start_fedmingle(container_list_full, file_name):
         global first, mqtt_broker_container
         try:
@@ -478,7 +850,7 @@ def start_fl(container_list_full, _routers):
             # MQTT Broker setup
             broker_ip = ps_cls.address_2  # Default to PS IP
             
-            if enable_mqtt or protocol == "mqtt" or protocol == "websocket":
+            if enable_mqtt:
                 broker_location = mqtt_config.get('broker_location', 'ps')
                 broker_image = mqtt_config.get('broker_image', 'eclipse-mosquitto:latest')
                 broker_commands = mqtt_config.get('broker_commands', [])
@@ -564,21 +936,31 @@ def start_fl(container_list_full, _routers):
                 else:
                     cmd = f"python3 -u run.py --protocol {protocol} --mode Client --my_ip {cli_cls.address_2} --port {server_port} --ip {srv_addr} --index {cli_cls.id} {' '.join(arguments)}"
                 
-                cmd += f" > /app/saved_output/{name_without_extension}_cli_{cli.name}.log 2>&1"
+                profile_str = get_container_profile_string(cli_cls)
+                
+                cmd += f" > /app/saved_output/{name_without_extension}_cli_{cli.name}__{profile_str}.log 2>&1"
                 cli.sendCmd(cmd)
                 log_command(cli.name, cmd)
 
-            info('*** Waiting PS Ending\n')
-            ps.waitOutput()
-            for cli in client_list:
-                cli.waitOutput()
             
             # Save command log to file
-            log_file = f"./output/{output_dir_name}/commands_executed.json"
+            log_file = f"{output_dir_name}/commands_executed.json"
             os.makedirs(os.path.dirname(log_file), exist_ok=True)
             with open(log_file, 'w') as f:
                 json.dump(executed_commands, f, indent=2)
             info(f"*** Commands logged to {log_file}\n")
+            
+            if resource_manager:
+                allocation_file = f"{output_dir_name}/cpu_allocations.json"
+                with open(allocation_file, 'w') as f:
+                    json.dump(resource_manager.get_allocation_summary(), f, indent=2)
+                info(f"*** CPU allocations logged to {allocation_file}\n")
+            
+            info('*** Waiting PS Ending\n')
+            ps.waitOutput()
+            for cli in client_list:
+                cli.waitOutput()
+
             
         except Exception as e:
             error(f"Exception: {e}\n")
@@ -596,11 +978,16 @@ def start_fl(container_list_full, _routers):
             start_fedmingle(container_list_full, config_file)
 
 def main():
+    global resource_manager
+    
     try:
         info('\n\tFL type: {}\n'.format(FL_TYPE))
         info('\n\tNumber of clients: {}\n'.format(clients))
         info('\n\tFor FL arguments setting see {} file!\n'.format(folder_name))
         info('\n')
+
+        info('*** Initializing CPU Resource Manager\n')
+        resource_manager = initialize_resource_manager()
 
         switches, routers = core_network()
         ip_routers = [r.networkIP for r in routers]
@@ -627,6 +1014,18 @@ def main():
         if interactive:
             info('*** Starting CLI\n')
             CLI(net)
+        
+        network_allocations = save_network_allocations(
+            container_list_full, 
+            routers, 
+            f"{output_dir_name}"
+        )
+        
+        # Save container configurations
+        container_configs = save_container_configs(
+            container_list_full, 
+            f"{output_dir_name}"
+        )
         
         info('*** Running FL Test\n')
         os.system("bash resources/disable_offload.sh >/dev/null 2>&1")
