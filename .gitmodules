@@ -1,0 +1,3 @@
+[submodule "FedOpt"]
+	path = FedOpt
+	url = https://github.com/antonio-boiano/FedOpt
