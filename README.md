@@ -13,12 +13,15 @@ FederNet is a flexible emulation framework for research and development of distr
 
 ## Requirements
 
-- Docker
-- Python 3.7+
-- Containernet (Mininet extension)
-- [docker-py](https://pypi.org/project/docker-py/) (`pip install -r requirements.txt`)
-- Mininet (see Containernet docs)
-
+- **Docker**
+- **Python 3.7+**
+- **Containernet**  
+  Install from this repository (required to support off-the-shelf FL frameworks such as Flower and OpenFL):  
+  https://github.com/antonio-boiano/containernet
+- **docker-py**  
+  Install via:  
+  ```bash
+  pip install -r requirements.txt
 ## Installation
 
 1. **Install Containernet** (see [Containernet docs](https://containernet.github.io/)).
