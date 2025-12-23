@@ -47,7 +47,8 @@ sudo python3 src/run.py <config_or_folder>
 - Example:
     ```bash
     docker pull anboiano/fedopt:latest
-    sudo python3 src/run.py configs/example_experiment.yaml
+    sudo python3 src/run.py examples/config_new_format.yaml
+
     ```
 
 ### Main scripts
