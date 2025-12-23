@@ -1,19 +1,96 @@
-clients: 24
-max_time: 14400
-experiment_name: mqtt_iid_unweighted
-image_name: anboiano/fedopt:latest
-protocol: mqtt
-network_type: [wifi_80211ac, 4g_lte_advanced,satellite_leo_starlink,satellite_geo,4g_lte,5g_sub6,wifi_80211ac, 4g_lte_advanced,satellite_leo_starlink,satellite_geo,4g_lte,5g_sub6,wifi_80211ac, 4g_lte_advanced,satellite_leo_starlink,satellite_geo,4g_lte,5g_sub6,wifi_80211ac, 4g_lte_advanced,satellite_leo_starlink,satellite_geo,4g_lte,5g_sub6]
-device_type: [rpi4, rpi4, rpi4, rpi4,rpi4,rpi4,rpi5,rpi5,rpi5, rpi5, rpi5, rpi5,intel_nuc8, intel_nuc8, intel_nuc8,intel_nuc8, intel_nuc8,intel_nuc8,jetson_nano,jetson_nano,jetson_nano,jetson_nano,jetson_nano,jetson_nano]
-host_single_core_score: 1554
-device_variance: 0.05
- 
-fl_method: Unweighted
-alpha: 10
-client_selection: false
-
-server_config:
-  min_client_to_start: 10
-
-
- 
+containernet:
+  num_containers: 25
+  image_name: anboiano/fedopt:latest
+  device_type:
+  - none
+  - rpi4
+  - rpi4
+  - rpi4
+  - rpi4
+  - rpi4
+  - rpi4
+  - rpi5
+  - rpi5
+  - rpi5
+  - rpi5
+  - rpi5
+  - rpi5
+  - intel_nuc8
+  - intel_nuc8
+  - intel_nuc8
+  - intel_nuc8
+  - intel_nuc8
+  - intel_nuc8
+  - jetson_nano
+  - jetson_nano
+  - jetson_nano
+  - jetson_nano
+  - jetson_nano
+  - jetson_nano
+  network_type:
+  - none
+  - wifi_80211ac
+  - 4g_lte_advanced
+  - satellite_leo_starlink
+  - satellite_geo
+  - 4g_lte
+  - 5g_sub6
+  - wifi_80211ac
+  - 4g_lte_advanced
+  - satellite_leo_starlink
+  - satellite_geo
+  - 4g_lte
+  - 5g_sub6
+  - wifi_80211ac
+  - 4g_lte_advanced
+  - satellite_leo_starlink
+  - satellite_geo
+  - 4g_lte
+  - 5g_sub6
+  - wifi_80211ac
+  - 4g_lte_advanced
+  - satellite_leo_starlink
+  - satellite_geo
+  - 4g_lte
+  - 5g_sub6
+  host_single_core_score: 1554
+  device_variance: 0.05
+  enable_tcpdump: false
+application:
+  name: mqtt_iid_unweighted
+  variables:
+    protocol: mqtt
+    port: 1883
+    fl_method: Unweighted
+    alpha: 10
+    rounds: 10
+    epochs: 5
+    min_clients: 10
+    num_client: 24
+    client_selection: false
+  roles:
+    server:
+      container_ids:
+      - 0
+      command: python3 -u run.py --protocol {protocol} --mode Server --port {port}
+        --ip {container_ip} --index {container_id} --rounds {rounds} --fl_method {fl_method}
+        --alpha {alpha} --min_clients {min_clients} --num_client {num_client}
+      startup_delay: 0
+      wait_for_completion: true
+      pre_commands:
+      - echo 'Starting MQTT broker and FL server'
+      - mosquitto -c /etc/mosquitto/mosquitto.conf -v > /app/saved_output/mosquitto.log
+        2>&1 &
+      - sleep 3
+    client:
+      container_ids: all_except_server
+      command: python3 -u run.py --protocol {protocol} --mode Client --my_ip {container_ip}
+        --port {port} --ip {{ip_0}} --index {container_id} --epochs {epochs} --fl_method
+        {fl_method} --alpha {alpha}
+      startup_delay: 10
+      wait_for_completion: true
+      pre_commands:
+      - echo 'Starting client {container_id} connecting to {ip_0}'
+  role_order:
+  - server
+  - client
