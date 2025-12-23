@@ -51,7 +51,7 @@ sudo python3 -m src.main --config <config_or_folder>
     or for FedOpt
     ```bash
     docker pull anboiano/fedopt:latest
-    python3 -m src.main --config experiments/config_new_format.yaml
+    python3 -m src.main --config examples/config_new_format.yaml
     ```
 
 ### Main scripts
