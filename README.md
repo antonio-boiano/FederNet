@@ -40,7 +40,7 @@ FederNet is a flexible emulation framework for research and development of distr
 Run an emulation experiment with:
 
 ```bash
-sudo python3 src/run.py <config_or_folder>
+sudo python3 -m src.main --config <config_or_folder>
 ```
 
 - `<config_or_folder>`: Path to a YAML config file or a directory containing multiple configs.
