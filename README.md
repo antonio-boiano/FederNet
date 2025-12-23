@@ -48,6 +48,7 @@ sudo python3 -m src.main --config <config_or_folder>
     ```bash
     python3 -m src.main --config experiments/flower_simple/config.yaml
     ```
+    or for FedOpt
     ```bash
     docker pull anboiano/fedopt:latest
     python3 -m src.main --config experiments/config_new_format.yaml
