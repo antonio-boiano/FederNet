@@ -46,9 +46,11 @@ sudo python3 -m src.main --config <config_or_folder>
 - `<config_or_folder>`: Path to a YAML config file or a directory containing multiple configs.
 - Example:
     ```bash
+    python3 -m src.main --config experiments/flower_simple/config.yaml
+    ```
+    ```bash
     docker pull anboiano/fedopt:latest
-    sudo python3 src/run.py examples/config_new_format.yaml
-
+    python3 -m src.main --config experiments/config_new_format.yaml
     ```
 
 ### Main scripts
