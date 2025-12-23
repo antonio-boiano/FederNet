@@ -46,6 +46,7 @@ sudo python3 src/run.py <config_or_folder>
 - `<config_or_folder>`: Path to a YAML config file or a directory containing multiple configs.
 - Example:
     ```bash
+    docker pull anboiano/fedopt:latest
     sudo python3 src/run.py configs/example_experiment.yaml
     ```
 
